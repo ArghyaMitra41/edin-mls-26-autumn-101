@@ -1,0 +1,78 @@
+2
+GEMM vs GEMV
+GEMM important for GPU operations because parallel operations
+
+3
+Fully connected layer use GEMM directly
+Convulation can be transferred into GEMM
+Data movement and data reuse decide speed.
+
+4
+Prefill - GEMM (compute-bound) = Process the prompt = Lots of calculations.
+Decode - GEMV (memory-bound) = Generate the response = Repeatedly access model weights.
+
+7
+CPU - optimised for serial tasks (more Control and Cache space)
+GPU - optimised for parallel tasks (more ALU space)
+
+18
+CUDA Cores vs Tensor Cores
+CUDA Cores handle general-purpose arithmetic operations.
+Tensor Cores are specifically designed to accelerate matrix operations.
+
+22
+CUDA - NVIDIA's parallel computing platform (C++ like)
+
+23
+Print blocks, threads
+__global__ -> GPU execution method declaration
+cudaDeviceSynchronize(): wait for the GPU before exit
+
+39
+Vector addition
+
+46
+Host - CPU
+Device - GPU
+Separate memory allocation and deallocation
+Explicit copy required
+
+47
+Managed memory - CUDA handle copy (explicit copy not required)
+Less code, but the copies are hidden: page migration costs time.
+Data transfer from CPU <-> GPU through PCIe and NVLink
+
+48
+GPU using CPU memory -> cudaErrorIllegalAddress
+
+49
+Pointer allocated to GPU, can't be accessed by host without cudaMemcpy -> Segmentation fault (core dumped)
+
+54
+./vector_add 1003 256
+GPU=NVIDIA GeForce RTX 2080 Ti CC=7.5 SMs=68 warp=32
+n=1003 block=256 grid=4
+checked=1003 failures=0
+PASS vector add
+
+[damnii09]s2916110: ./vector_add 257 128
+GPU=NVIDIA GeForce RTX 2080 Ti CC=7.5 SMs=68 warp=32
+n=257 block=128 grid=3
+checked=257 failures=0
+PASS vector add
+
+57
+Vector add CPU - Uses for loop
+Vector add GPU - No for loop used (multiple threads lauched simultaneously)
+
+61
+CUDA Streams
+
+66
+CUDA Stream batches
+
+71
+Shared memory vs Cache
+
+82
+GEMM accelerated w Tiling
