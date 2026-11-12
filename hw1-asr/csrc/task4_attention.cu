@@ -53,7 +53,7 @@ __global__ void attention_kernel(const float* q, const float* k, const float* v,
   // ======================== BLANK 4.1 =========================
   // Set kv_h, the K/V head that query head h reads (GQA: groups of consecutive
   // query heads share one K/V head).
-  // YOUR CODE HERE
+  kv_h = h / (num_heads / num_kv_heads);
   // ============================================================
 
   const size_t q_stride = static_cast<size_t>(num_heads) * head_dim;      // token to token in q, out
@@ -89,25 +89,58 @@ __global__ void attention_kernel(const float* q, const float* k, const float* v,
     // Copy keys and values j0 .. j0+KV_TILE-1 of this head into k_tile (rows of
     // k_pitch floats) and v_tile (rows of head_dim floats), with 0 for keys past
     // seq_k. All threads of the block take part.
-    // YOUR CODE HERE
+    for (int idx = threadIdx.x; idx < KV_TILE * head_dim; idx += blockDim.x) {
+      const int r = idx / head_dim;
+      const int d = idx % head_dim;
+      const int j = j0 + r;
+      float kval = 0.0f, vval = 0.0f;
+      if (j < seq_k) {
+        kval = k_head[j * kv_stride + d];
+        vval = v_head[j * kv_stride + d];
+      }
+      k_tile[r * k_pitch + d] = kval;
+      v_tile[r * head_dim + d] = vval;
+    }
+    __syncthreads();
     // ============================================================
 
     float s = -INFINITY;  // this lane's score for key j0 + lane
     // ======================== BLANK 4.3 =========================
     // Set s to this query's score for key j0 + lane, if the query may see that
     // key (last_key).
-    // YOUR CODE HERE
+    if (j0 + lane <= last_key) {
+      const float* kr = k_tile + lane * k_pitch;
+      float dot = 0.0f;
+      for (int d = 0; d < head_dim; ++d) dot += qv[d] * kr[d];
+      s = dot;
+    }
     // ============================================================
 
     float p = 0.0f;  // this lane's exp(s - m_new): unnormalised probability of key j0 + lane
     // ======================== BLANK 4.4 =========================
     // Update m, l and acc with this tile (guide, section 3) and set p.
-    // YOUR CODE HERE
+    const float m_new = fmaxf(m, warp_reduce_max(s));
+    float corr = 1.0f;
+    if (m_new != -INFINITY) {
+      corr = expf(m - m_new);  // 0 when m was -inf (l and acc are 0 then anyway)
+      p = expf(s - m_new);     // 0 for masked keys
+    }
+    l = l * corr + warp_reduce_sum(p);
+#pragma unroll
+    for (int i = 0; i < MAX_DIMS_PER_LANE; ++i)
+      if (i < dims) acc[i] *= corr;
+    m = m_new;
     // ============================================================
 
     // ======================== BLANK 4.5 =========================
     // Add this tile's values, weighted by p, to acc.
-    // YOUR CODE HERE
+    for (int r = 0; r < KV_TILE; ++r) {
+      const float pr = __shfl_sync(FULL_MASK, p, r);
+      const float* vr = v_tile + r * head_dim;
+#pragma unroll
+      for (int i = 0; i < MAX_DIMS_PER_LANE; ++i)
+        if (i < dims) acc[i] += pr * vr[lane + i * WARP_SIZE];
+    }
     // ============================================================
 
     __syncthreads();  // all warps are done with this tile before the next one overwrites it
@@ -115,7 +148,13 @@ __global__ void attention_kernel(const float* q, const float* k, const float* v,
 
   // ======================== BLANK 4.6 =========================
   // Write acc / l to out for this warp's query.
-  // YOUR CODE HERE
+  if (active) {
+    float* o = out + (static_cast<size_t>(b) * seq_q + qi) * q_stride + h * head_dim;
+    const float inv_l = (l > 0.0f) ? 1.0f / l : 0.0f;
+#pragma unroll
+    for (int i = 0; i < MAX_DIMS_PER_LANE; ++i)
+      if (i < dims) o[lane + i * WARP_SIZE] = acc[i] * inv_l;
+  }
   // ============================================================
 }
 
