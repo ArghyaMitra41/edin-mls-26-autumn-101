@@ -99,3 +99,89 @@ Transcription: Concord returned to its place amidst the tents.
 Expected:      Concord returned to its place amidst the tents
 Accuracy: 100.0%
 Status: PASS
+
+//Task 1
+build/sm_75/test_task1_rope
+GPU: NVIDIA GeForce RTX 2080 Ti (sm_75), 68 SMs, peak memory bandwidth about 616 GB/s
+
+tiny (2 x 3 tokens, Hq=3, Hk=1)      PASS  max_err=1.08e-07     0.003 ms      0.5 GB/s ( 0% of peak)
+odd sizes, partial rotation          PASS  max_err=1.08e-07     0.004 ms      4.1 GB/s ( 1% of peak)
+audio encoder (partial, 32/64)       PASS  max_err=1.93e-07     0.031 ms    491.2 GB/s (80% of peak)
+text decoder (GQA 16/4, full)        PASS  max_err=1.64e-07     0.004 ms    299.0 GB/s (49% of peak)
+
+Task 1 (RoPE): ALL PASS
+
+//Task 2
+GPU: NVIDIA GeForce RTX 2080 Ti (sm_75), 68 SMs, peak memory bandwidth about 616 GB/s
+
+rmsnorm, one short row               PASS  max_err=8.27e-08     0.003 ms      0.1 GB/s ( 0% of peak)
+rmsnorm, odd cols                    PASS  max_err=3.68e-07     0.004 ms      9.8 GB/s ( 2% of peak)
+rmsnorm, text decoder                PASS  max_err=4.35e-07     0.006 ms    164.7 GB/s (27% of peak)
+layernorm, odd cols (example)        PASS  max_err=3.91e-07     0.005 ms      8.0 GB/s ( 1% of peak)
+layernorm, audio encoder             PASS  max_err=5.42e-07     0.040 ms    381.6 GB/s (62% of peak)
+softmax, one short row               PASS  max_err=1.11e-08     0.003 ms      0.0 GB/s ( 0% of peak)
+softmax, odd cols                    PASS  max_err=1.04e-09     0.004 ms      5.6 GB/s ( 1% of peak)
+softmax, large inputs (+-100)        PASS  max_err=2.67e-08     0.005 ms      3.2 GB/s ( 1% of peak)
+softmax, all negative (-200..-150)   PASS  max_err=6.11e-09     0.003 ms      1.4 GB/s ( 0% of peak)
+softmax, vocabulary row (59264)      PASS  max_err=8.13e-11     0.131 ms      3.6 GB/s ( 1% of peak)
+softmax, 64 x 4096                   PASS  max_err=7.95e-10     0.010 ms    218.7 GB/s (36% of peak)
+
+Task 2 (reductions): ALL PASS
+
+//Task 3
+GPU: NVIDIA GeForce RTX 2080 Ti (sm_75), 68 SMs, peak memory bandwidth about 616 GB/s
+
+tiny 3 x 5, K = 7                    PASS  max_err=9.76e-09     0.003 ms        0 GFLOP/s
+    for comparison: naive      0 GFLOP/s, cuBLAS      0 GFLOP/s (CPU reference)
+odd sizes 37 x 100, K = 33, bias     PASS  max_err=1.55e-07     0.004 ms       64 GFLOP/s
+    for comparison: naive     48 GFLOP/s, cuBLAS     31 GFLOP/s (CPU reference)
+odd sizes, bias + GELU               PASS  max_err=7.70e-07     0.007 ms      126 GFLOP/s
+    for comparison: naive     90 GFLOP/s, cuBLAS    105 GFLOP/s (CPU reference)
+decoder q_proj (64x2048x2048)        PASS  max_err=1.10e-05     0.441 ms     1217 GFLOP/s
+    for comparison: naive    153 GFLOP/s, cuBLAS   4722 GFLOP/s (cuBLAS reference)
+decoder gate_proj (64x6144x2048)     PASS  max_err=1.19e-05     1.205 ms     1337 GFLOP/s
+    for comparison: naive    162 GFLOP/s, cuBLAS   6833 GFLOP/s (cuBLAS reference)
+decoder down_proj (64x2048x6144)     PASS  max_err=3.62e-05     1.237 ms     1302 GFLOP/s
+    for comparison: naive    182 GFLOP/s, cuBLAS   7969 GFLOP/s (cuBLAS reference)
+lm_head, last token (1x59264x2048)   PASS  max_err=1.24e-05     1.958 ms      124 GFLOP/s
+    for comparison: naive    116 GFLOP/s, cuBLAS    291 GFLOP/s (cuBLAS reference)
+encoder q_proj (1500x1280x1280)      PASS  max_err=2.38e-07     2.600 ms     1890 GFLOP/s
+    for comparison: naive    232 GFLOP/s, cuBLAS  13108 GFLOP/s (cuBLAS reference)
+encoder fc1 + GELU (1500x5120x1280)  PASS  max_err=6.92e-07    14.212 ms     1383 GFLOP/s
+    for comparison: naive    234 GFLOP/s, cuBLAS  13630 GFLOP/s (cuBLAS reference)
+conv2 via im2col (1500x1280x3840)    PASS  max_err=7.16e-07    10.128 ms     1456 GFLOP/s
+    for comparison: naive    234 GFLOP/s, cuBLAS  13660 GFLOP/s (cuBLAS reference)
+
+Task 3 (tiled GEMM): ALL PASS
+
+//Task 4
+GPU: NVIDIA GeForce RTX 2080 Ti (sm_75), 68 SMs, peak memory bandwidth about 616 GB/s
+
+tiny, one tile (4 queries, 5 keys)   PASS  max_err=1.11e-07     0.006 ms        0 GFLOP/s
+several tiles, peaky scores          PASS  max_err=4.97e-07     0.019 ms       12 GFLOP/s
+GQA 4 heads / 2 kv heads             PASS  max_err=1.30e-07     0.009 ms       66 GFLOP/s
+causal, seq_q = seq_k                PASS  max_err=4.86e-07     0.036 ms       70 GFLOP/s
+causal, 5 new queries, 37 keys       PASS  max_err=1.78e-07     0.010 ms       18 GFLOP/s
+causal, one new query                PASS  max_err=3.39e-07     0.033 ms       18 GFLOP/s
+text decoder (GQA 16/4, causal)      PASS  max_err=5.21e-07     0.091 ms      184 GFLOP/s
+audio encoder (20 heads, 1500)       PASS  max_err=2.68e-07    12.508 ms      921 GFLOP/s
+
+Task 4 (attention): ALL PASS
+
+//Run
+GPU: NVIDIA GeForce RTX 2080 Ti (sm_75)
+Kernels: rope=cuda  reduce=cuda  gemm=cuda  attention=cuda  provided=cuda
+Library: /home/s2916110/edin-mls-26-autumn-101/hw1-asr/build/sm_75/libasr_kernels.so
+Loading the model (about 9 GB of float32 weights)...
+Loaded in 89.2 s
+Audio: 3.50 s, mel features (1, 128, 3000), prompt 59 tokens
+  run 1:   3248.5 ms  (13 tokens)
+  run 2:   3260.3 ms  (13 tokens)
+  run 3:   3264.7 ms  (13 tokens)
+
+Time: 3257.8 ms per transcription (+/- 6.8 ms), 250.6 ms per token
+Peak GPU memory: 8.56 GiB
+Transcription: Concord returned to its place amidst the tents.
+Expected:      Concord returned to its place amidst the tents
+Accuracy: 100.0%
+Status: PASS
