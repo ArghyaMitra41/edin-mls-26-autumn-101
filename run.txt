@@ -1,0 +1,21 @@
+ssh s2916110@ssh.inf.ed.ac.uk
+ssh mlp.inf.ed.ac.uk
+
+srun -p Teaching --gres=gpu:nvidia_geforce_rtx_2080_ti:1 --cpus-per-task=2 --mem=16G --time=01:00:00 --pty bash
+export PATH=/opt/cuda-12.8.0/bin:$PATH
+conda activate mls-asr
+cd ~/edin-mls-26-autumn-101/hw1-asr
+nvidia-smi -L
+
+make                          # fix any compile errors first
+make test1                    # → Task 1 (RoPE): ALL PASS
+make test2                    # → Task 2 (reductions): ALL PASS
+make test3                    # → ALL PASS, plus naive / cuBLAS GFLOP/s comparison
+make test4                    # → Task 4 (attention): ALL PASS
+make clean && make test
+
+./run.sh --cuda task1
+./run.sh --cuda task1,task2
+./run.sh --cuda task1,task2,task3
+./run.sh                      # all four → "Status: PASS", 100% accuracy
+./run.sh --profile
