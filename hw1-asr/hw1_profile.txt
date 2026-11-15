@@ -1,0 +1,28 @@
+GPU: NVIDIA GeForce RTX 2080 Ti (sm_75)
+Kernels: rope=cuda  reduce=cuda  gemm=cuda  attention=cuda  provided=cuda
+Library: /home/s2916110/edin-mls-26-autumn-101/hw1-asr/build/sm_75/libasr_kernels.so
+Loading the model (about 9 GB of float32 weights)...
+Loaded in 72.6 s
+Audio: 3.50 s, mel features (1, 128, 3000), prompt 59 tokens
+  run 1:   3222.1 ms  (13 tokens)
+  run 2:   3230.1 ms  (13 tokens)
+  run 3:   3239.6 ms  (13 tokens)
+
+GPU time per operation, one transcription (3398.5 ms in kernels):
+  operation    runs on    calls   total ms   share
+  linear       cuda        2757     2832.1   83.3%
+  attention    cuda         396      547.3   16.1%
+  rmsnorm      cuda         741        6.7    0.2%
+  silu_mul     cuda         364        3.6    0.1%
+  rope         cuda         396        3.0    0.1%
+  layernorm    cuda          65        2.4    0.1%
+  softmax      cuda          13        1.6    0.0%
+  embedding    cuda          13        1.5    0.0%
+  im2col       cuda           2        0.2    0.0%
+
+Time: 3230.6 ms per transcription (+/- 7.2 ms), 248.5 ms per token
+Peak GPU memory: 8.56 GiB
+Transcription: Concord returned to its place amidst the tents.
+Expected:      Concord returned to its place amidst the tents
+Accuracy: 100.0%
+Status: PASS
