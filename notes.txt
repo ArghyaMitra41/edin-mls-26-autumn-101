@@ -111,6 +111,11 @@ text decoder (GQA 16/4, full)        PASS  max_err=1.64e-07     0.004 ms    299.
 
 Task 1 (RoPE): ALL PASS
 
+1. For the audio encoder case, how many bytes does the kernel read and write in total? Which fraction of your GPU's peak bandwidth did you reach?
+Ans: For the audio-encoder shape (1500 tokens, 20 q and 20 k heads, rotary_dim = 32 of head_dim = 64), the kernel reads and writes only the rotated part: 60,000 rows × 32 elements × 4 B × 2 = 15.36 MB (the 64 B inv_freq table is cache-resident and negligible).
+    At 0.031 ms this is 491 GB/s, 80% of the RTX 2080 Ti's 616 GB/s theoretical peak. Accesses are fully coalesced: each row's rotated half is one aligned 128 B segment.
+    Much of the remaining gap is the ~3 µs fixed cost also seen in the tiny cases: subtracting it gives ≈550 GB/s (~89%), close to what a plain copy kernel achieves.
+
 //Task 2
 GPU: NVIDIA GeForce RTX 2080 Ti (sm_75), 68 SMs, peak memory bandwidth about 616 GB/s
 
@@ -127,6 +132,12 @@ softmax, vocabulary row (59264)      PASS  max_err=8.13e-11     0.131 ms      3.
 softmax, 64 x 4096                   PASS  max_err=7.95e-10     0.010 ms    218.7 GB/s (36% of peak)
 
 Task 2 (reductions): ALL PASS
+
+4. Describe, as a sequence of events between two warps, what can go wrong in LayerNorm without the final __syncthreads() in block_reduce_sum.
+Ans: block_reduce_sum stores per-warp sums in a single static __shared__ partial[32], which both LayerNorm reductions (mean, then variance) reuse, and in step 3 every warp reads all slots.
+    Without the final barrier: (1) both warps write their sums S0, S1 and pass the first barrier; (2) warp 0 reads S0 + S1 and gets the correct mean, while warp 1 is descheduled before reading; (3) warp 0 returns, computes its variance partial Q0 and writes it to partial[0] in the second call; (4) warp 1 now reads Q0 + S1 and computes a wrong mean.
+    This write-after-read hazard gives the row two inconsistent means and corrupts its variance, so every output in the row is wrong, without any error.
+    Because warp 0 must run a full pass over the row before it can overwrite the slot, the race rarely fires and make test2 still passed without the barrier; racecheck reported the hazard on partial.
 
 //Task 3
 GPU: NVIDIA GeForce RTX 2080 Ti (sm_75), 68 SMs, peak memory bandwidth about 616 GB/s
@@ -154,6 +165,11 @@ conv2 via im2col (1500x1280x3840)    PASS  max_err=7.16e-07    10.128 ms     145
 
 Task 3 (tiled GEMM): ALL PASS
 
+1. For M = N = K = 1024, how many floats does the naive kernel load from global memory in total, and how many does your tiled kernel load? (Count requests, ignoring caches.)
+Ans: For M = N = K = 1024, the naive kernel has each of the M·N threads load one element of x and one of W per k, so it issues 2MNK = 2³¹ ≈ 2.1 × 10⁹ float loads (8.6 GB).
+    The tiled kernel (TILE = 16) has each of the (N/16)(M/16) = 4,096 blocks load a 16×16 tile of x and of W per k-step, for K/16 = 64 steps: 4,096 × 64 × 512 = 2²⁷ ≈ 1.3 × 10⁸ loads (537 MB), a factor of TILE = 16 fewer, since each value in shared memory is reused by 16 threads.
+    The measured speedup is smaller (e.g. 232 → 1,890 GFLOP/s on encoder q_proj, 8×), because the caches already absorb part of the naive kernel's redundant loads: its 0.25 FLOP/B intensity would cap it at ~154 GFLOP/s at the 616 GB/s DRAM bandwidth, yet it achieves 232.
+
 //Task 4
 GPU: NVIDIA GeForce RTX 2080 Ti (sm_75), 68 SMs, peak memory bandwidth about 616 GB/s
 
@@ -167,6 +183,13 @@ text decoder (GQA 16/4, causal)      PASS  max_err=5.21e-07     0.091 ms      18
 audio encoder (20 heads, 1500)       PASS  max_err=2.68e-07    12.508 ms      921 GFLOP/s
 
 Task 4 (attention): ALL PASS
+
+1. How much memory would the full score matrix of one encoder layer take (20 heads, 1500 x 1500, float32)? How much shared memory does one block of your kernel use instead?
+Ans. One encoder self-attention layer has 20 heads of 1500 × 1500 scores; stored as float32 this matrix is 20 × 1500² × 4 B = 180 MB.
+    Even one head (9 MB) exceeds the RTX 2080 Ti's 5.5 MB L2 cache, so the matrix would have to go to DRAM and back: writing, softmax-ing and re-reading it costs ≈720 MB of traffic per layer.
+    Our kernel never stores it: each block (4 queries) streams K and V in tiles of 32 keys through shared memory holding k_tile (32 × 65), v_tile (32 × 64) and the 4 scaled queries (4 × 64), i.e.
+    4,384 floats = 17.5 KB, while the running max, sum and output accumulator stay in registers.
+    This is ~10⁴× smaller than the score matrix and independent of sequence length.
 
 //Run
 GPU: NVIDIA GeForce RTX 2080 Ti (sm_75)
