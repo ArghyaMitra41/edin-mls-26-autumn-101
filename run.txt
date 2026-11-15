@@ -1,7 +1,7 @@
 ssh s2916110@ssh.inf.ed.ac.uk
 ssh mlp.inf.ed.ac.uk
 
-srun -p Teaching --gres=gpu:nvidia_geforce_rtx_2080_ti:1 --cpus-per-task=2 --mem=16G --time=01:00:00 --pty bash
+srun -p Teaching --gres=gpu:nvidia_geforce_rtx_2080_ti:1 --cpus-per-task=2 --mem=16G --time=03:00:00 --pty bash
 export PATH=/opt/cuda-12.8.0/bin:$PATH
 conda activate mls-asr
 cd ~/edin-mls-26-autumn-101/hw1-asr
@@ -21,9 +21,19 @@ make clean && make test
 ./run.sh --profile
 
 
+===========================RAG===============================
+=============================================================
+
+cd ~/edin-mls-26-autumn-101
 conda activate mls-asr
 export RAG_ASR_PYTHON="$(python -c 'import sys; print(sys.executable)')"
-python -m venv "$HOME/mls-rag-env"
 source "$HOME/mls-rag-env/bin/activate"
-python -m pip install -r rag/requirements.txt
-cp rag/.env.example rag/.env
+export PATH=/opt/cuda-12.8.0/bin:$PATH
+make -C hw1-asr lib
+python rag/scripts/check_setup.py
+
+python rag/scripts/generate_answers.py --device cpu --split practice --output rag/results/baseline_practice.jsonl
+python rag/scripts/evaluate_answers.py --split practice --candidates rag/results/baseline_practice.jsonl --out-dir rag/results/baseline_judge
+python rag/scripts/evaluate_answers.py --split practice --candidates rag/results/baseline_practice.jsonl --out-dir rag/results/baseline_judge --api-retries 6
+
+q_148262b1f4e5ab84

@@ -10,7 +10,7 @@ import statistics
 import time
 from pathlib import Path
 
-SCRIPT_VERSION = "v0.3-public-answer-judge"
+SCRIPT_VERSION = "v0.3.1-public-answer-judge"
 RUBRIC_VERSION = "rag-answer-rubric-v0.1"
 
 JUDGE_SYSTEM_PROMPT = """You are a strict but fair evaluator for a university
@@ -177,7 +177,21 @@ class Judge:
         raw = raw.strip()
         raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.I)
         raw = re.sub(r"\s*```$", "", raw)
-        obj = json.loads(raw)
+        try:
+            obj = json.loads(raw)
+        except json.JSONDecodeError as err:
+            # The judge sometimes emits invalid JSON (e.g. an unescaped quote inside
+            # "explanation"). Recover the three integer scores by pattern instead;
+            # valid replies never reach this path, so their scoring is unchanged.
+            obj = {}
+            for key in ("correctness", "grounding", "completeness"):
+                m = re.search(r'"' + key + r'"\s*:\s*(-?\d+)', raw)
+                if m is None:
+                    raise err
+                obj[key] = int(m.group(1))
+            m = re.search(r'"explanation"\s*:\s*"(.*)"\s*\}?\s*$', raw, flags=re.S)
+            obj["explanation"] = m.group(1) if m else ""
+            obj["parse_fallback"] = True
 
         for key in ("correctness", "grounding", "completeness"):
             value = obj[key]
