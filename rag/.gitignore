@@ -19,3 +19,6 @@ data/rag_corpus/*
 !data/rag_corpus/README.md
 models/enc_a/*
 !models/enc_a/README.md
+
+# Downloaded cross-encoder rerankers (investigation)
+models/rerankers/
