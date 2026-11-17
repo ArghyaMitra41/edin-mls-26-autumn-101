@@ -1,0 +1,85 @@
+{
+  "split": "practice",
+  "queries": 10,
+  "dense_depth": 100,
+  "transcript_cache": "rag/.cache/practice_transcripts.jsonl",
+  "reranker_device": "cuda",
+  "batch_size": 32,
+  "n_relevant": {
+    "mean": 1.5,
+    "max": 3,
+    "share_more_than_5": 0.0
+  },
+  "baseline": {
+    "Recall@5": 0.5833333333333334,
+    "Recall@10": 0.5833333333333334,
+    "Recall@20": 0.7666666666666666,
+    "Recall@100": 0.7666666666666666,
+    "MRR@10": 0.445,
+    "NDCG@10": 0.4259274478310854
+  },
+  "oracle_Recall@5": {
+    "10": 0.5833333333333334,
+    "50": 0.7666666666666666
+  },
+  "configs": {
+    "minilm-l6@N10": {
+      "Recall@5": 0.3333333333333333,
+      "Recall@10": 0.5833333333333334,
+      "Recall@20": 0.7666666666666666,
+      "Recall@100": 0.7666666666666666,
+      "MRR@10": 0.4267857142857142,
+      "NDCG@10": 0.3953389087301762,
+      "rerank_ms_mean": 268.485267496726,
+      "rerank_ms_median": 38.14178449829342,
+      "rerank_ms_p95": 2346.3552670000354
+    },
+    "minilm-l6@N50": {
+      "Recall@5": 0.36666666666666664,
+      "Recall@10": 0.5166666666666666,
+      "Recall@20": 0.7666666666666666,
+      "Recall@100": 0.7666666666666666,
+      "MRR@10": 0.3111111111111111,
+      "NDCG@10": 0.32583959536562973,
+      "rerank_ms_mean": 109.80236709874589,
+      "rerank_ms_median": 107.40907849685755,
+      "rerank_ms_p95": 122.8580759925535
+    },
+    "bge-base@N10": {
+      "Recall@5": 0.3833333333333333,
+      "Recall@10": 0.5833333333333334,
+      "Recall@20": 0.7666666666666666,
+      "Recall@100": 0.7666666666666666,
+      "MRR@10": 0.4766666666666667,
+      "NDCG@10": 0.45545011171572336,
+      "rerank_ms_mean": 95.3763399971649,
+      "rerank_ms_median": 107.98578149115201,
+      "rerank_ms_p95": 122.46764100564178
+    },
+    "bge-base@N50": {
+      "Recall@5": 0.41666666666666663,
+      "Recall@10": 0.41666666666666663,
+      "Recall@20": 0.6166666666666666,
+      "Recall@100": 0.7666666666666666,
+      "MRR@10": 0.45,
+      "NDCG@10": 0.4111336450231871,
+      "rerank_ms_mean": 379.77621930040186,
+      "rerank_ms_median": 375.07217950042104,
+      "rerank_ms_p95": 426.9184409931768
+    }
+  },
+  "models": {
+    "minilm-l6": {
+      "path": "rag/models/rerankers/minilm-l6",
+      "load_ms": 2849.3470510002226,
+      "truncated_pair_share": 0.07600000000000001,
+      "peak_gpu_mem_mb": 359.02880859375
+    },
+    "bge-base": {
+      "path": "rag/models/rerankers/bge-base",
+      "load_ms": 34105.05601001205,
+      "truncated_pair_share": 0.098,
+      "peak_gpu_mem_mb": 1599.98095703125
+    }
+  }
+}
