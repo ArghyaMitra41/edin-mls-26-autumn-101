@@ -7,8 +7,6 @@ conda activate mls-asr
 cd ~/edin-mls-26-autumn-101/hw1-asr
 nvidia-smi -L
 
-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
-
 make                          # fix any compile errors first
 make test1                    # → Task 1 (RoPE): ALL PASS
 make test2                    # → Task 2 (reductions): ALL PASS
