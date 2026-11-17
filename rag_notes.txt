@@ -93,3 +93,9 @@ Aggregate:
   Recall@100 0.769856
   MRR@10     0.488746
   NDCG@10    0.420461
+
+  Locally / head node: python -m unittest discover -s rag/tests -v (stub tests).
+GPU node, regression: generate_answers.py --limit 3 --transcript-cache … without --reranker gives the same retrieved_record_ids as the existing baseline_practice.jsonl for those queries.
+GPU node, smoke test: evaluate_rerank.py --split practice --depths 10 on both models. Expect a Recall@5 change and rerank_ms in the ms–tens-of-ms range on the GPU. Oracle Recall@5 must be ≥ the reranked Recall@5.
+Check that N = 100 with MiniLM never lowers Recall@100 (the same candidate set is reordered). This is a sanity check on the metric code.
+evaluate_answers.py --dry-run on each rerank candidate file before spending ELM calls.

@@ -7,6 +7,8 @@ conda activate mls-asr
 cd ~/edin-mls-26-autumn-101/hw1-asr
 nvidia-smi -L
 
+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
+
 make                          # fix any compile errors first
 make test1                    # → Task 1 (RoPE): ALL PASS
 make test2                    # → Task 2 (reductions): ALL PASS
@@ -37,3 +39,28 @@ python rag/scripts/evaluate_answers.py --split practice --candidates rag/results
 python rag/scripts/evaluate_answers.py --split practice --candidates rag/results/baseline_practice.jsonl --out-dir rag/results/baseline_judge --api-retries 6
 
 q_148262b1f4e5ab84
+
+python -c "import torch; print(torch.cuda.is_available())"   # must be True
+python -m unittest discover -s rag/tests -v
+python rag/scripts/evaluate_rerank.py --device cpu --split practice --limit 10 --transcript-cache rag/.cache/practice_transcripts.jsonl --models rag/models/rerankers/minilm-l6 rag/models/rerankers/bge-base --depths 10 50 --out-dir rag/results/rerank_smoke
+
+python rag/scripts/evaluate_rerank.py --device cpu --split practice --transcript-cache rag/.cache/practice_transcripts.jsonl --models rag/models/rerankers/minilm-l6 rag/models/rerankers/bge-base --depths 10 20 50 100 --out-dir rag/results/rerank_sweep_practice 2>&1 | tee rag/results/rerank_sweep_practice.log
+
+
+
+python rag/scripts/evaluate_rag.py --device cpu --split dev --transcript-cache rag/.cache/dev_transcripts.jsonl | tee rag/results/dev_baseline_retrieval.txt
+
+python rag/scripts/evaluate_rerank.py --device cpu --split dev --transcript-cache rag/.cache/dev_transcripts.jsonl --models rag/models/rerankers/minilm-l6 rag/models/rerankers/bge-base --depths 10 20 50 100 --out-dir rag/results/rerank_sweep_dev 2>&1 | tee rag/results/rerank_sweep_dev.log
+
+python rag/extensions/bench_rerank.py --device cpu --split dev --transcript-cache rag/.cache/dev_transcripts.jsonl --models rag/models/rerankers/minilm-l6 rag/models/rerankers/bge-base --out rag/results/rerank_bench_dev.json
+
+C="--device cpu --split dev --transcript-cache rag/.cache/dev_transcripts.jsonl"
+python rag/scripts/generate_answers.py $C --output rag/results/dev_baseline.jsonl
+python rag/scripts/generate_answers.py $C --reranker rag/models/rerankers/minilm-l6 --candidate-depth 20 --output rag/results/dev_rerank_minilm_N20.jsonl
+python rag/scripts/generate_answers.py $C --reranker rag/models/rerankers/bge-base --candidate-depth 10 --output rag/results/dev_rerank_bge_N10.jsonl
+
+for n in dev_baseline dev_rerank_minilm_N20 dev_rerank_bge_N10; do
+  python rag/scripts/evaluate_answers.py --split dev --candidates rag/results/$n.jsonl --dry-run && \
+  python rag/scripts/evaluate_answers.py --split dev --candidates rag/results/$n.jsonl --out-dir rag/results/${n}_judge
+done
+grep -c parse_fallback rag/results/dev_*_judge/judge_cache.jsonl
