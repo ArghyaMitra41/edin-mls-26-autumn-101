@@ -1,0 +1,604 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Coursework video slides</title>
+<style>
+  :root {
+    --scale: 1;
+    --bg: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink2: #52514e;
+    --muted: #898781;
+    --hair: #e1e0d9;
+    --axis: #c3c2b7;
+    --panel: #f3f2ee;
+    --ours: #2a78d6;
+    --ours-wash: rgba(42, 120, 214, 0.10);
+    --ours-ink: #1c5cab;
+    --bge: #eb6834;
+    --good: #006300;
+    --sans: system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink); overflow: hidden; }
+  body { font-family: var(--sans); }
+  body.idle, body.idle * { cursor: none !important; }
+
+  .stage {
+    position: fixed; left: 50%; top: 50%;
+    width: 1600px; height: 900px;
+    transform: translate(-50%, -50%) scale(var(--scale));
+    transform-origin: center center;
+  }
+  .slide {
+    position: absolute; inset: 0;
+    padding: 64px 88px 56px;
+    display: none; flex-direction: column;
+    background: var(--bg);
+  }
+  .slide.active { display: flex; }
+  .num { position: absolute; right: 40px; bottom: 26px; font-size: 18px; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  .kicker { font-size: 21px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0 0 10px; }
+  h1 { font-size: 66px; line-height: 1.1; margin: 0; font-weight: 700; letter-spacing: -0.01em; }
+  h2 { font-size: 50px; line-height: 1.12; margin: 0 0 30px; font-weight: 680; letter-spacing: -0.005em; }
+  p, li { font-size: 28px; line-height: 1.38; }
+  p { margin: 0 0 16px; }
+  ul { margin: 0; padding-left: 30px; }
+  li { margin: 0 0 12px; }
+  li::marker { color: var(--muted); }
+  .small { font-size: 22px; line-height: 1.4; color: var(--ink2); }
+  .muted { color: var(--ink2); }
+  code, .mono { font-family: var(--mono); font-size: .86em; }
+  b, strong { font-weight: 650; }
+  .ours-text { color: var(--ours-ink); font-weight: 650; }
+  .grow { flex: 1; }
+  .nw { white-space: nowrap; }
+  .row { display: flex; gap: 36px; }
+  .col { flex: 1; min-width: 0; }
+
+  /* Title slide */
+  .title-slide { justify-content: center; }
+  .title-slide h1 { max-width: 1300px; }
+  .title-slide .sub { font-size: 40px; color: var(--ink2); margin-top: 22px; line-height: 1.25; }
+  .title-slide .rule { width: 120px; height: 6px; background: var(--ours); border-radius: 3px; margin: 0 0 40px; }
+
+  /* Pipeline */
+  .flow { display: flex; align-items: stretch; gap: 0; margin: 10px 0 34px; }
+  .node {
+    flex: 1 1 0; min-width: 0;
+    border: 2px solid var(--axis); background: var(--panel);
+    border-radius: 12px; padding: 16px 10px; text-align: center;
+    font-size: 22px; line-height: 1.25; display: flex; flex-direction: column; justify-content: center;
+  }
+  .node .tag { display: block; font-size: 17px; color: var(--ink2); margin-top: 6px; }
+  .node.ours { border-color: var(--ours); background: var(--ours-wash); }
+  .node.ours b { color: var(--ours-ink); }
+  .node.plain { border: none; background: none; font-weight: 600; }
+  .arrow { flex: 0 0 34px; display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 28px; }
+  .key { display: flex; gap: 34px; font-size: 22px; color: var(--ink2); margin-bottom: 24px; }
+  .swatch { display: inline-block; width: 22px; height: 22px; border-radius: 5px; vertical-align: -4px; margin-right: 10px; border: 2px solid var(--axis); background: var(--panel); }
+  .swatch.ours { border-color: var(--ours); background: var(--ours-wash); }
+
+  /* Cards */
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 28px; }
+  .card { border: 2px solid var(--hair); border-radius: 14px; padding: 18px 24px 16px; background: #fff; }
+  .card h3 { font-size: 26px; margin: 0 0 8px; font-weight: 680; }
+  .card h3 .tasklabel { color: var(--ours-ink); }
+  .card p { font-size: 23px; line-height: 1.36; margin: 0; color: var(--ink); }
+  .footnote { margin-top: auto; font-size: 22px; color: var(--ink2); }
+
+  /* Tables */
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 9px 14px; font-size: 24px; border-bottom: 1px solid var(--hair); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { font-size: 20px; color: var(--ink2); font-weight: 600; border-bottom: 2px solid var(--axis); vertical-align: bottom; white-space: normal; }
+  tr.sep td { border-top: 2px solid var(--axis); }
+  td.hl { font-weight: 650; }
+  .caption { font-size: 19px; color: var(--ink2); margin-top: 12px; line-height: 1.4; }
+
+  /* Stat tiles */
+  .tiles { display: flex; gap: 32px; margin-bottom: 34px; }
+  .tile { flex: 1; border: 2px solid var(--hair); border-radius: 14px; padding: 22px 28px; background: #fff; }
+  .tile .value { font-size: 64px; font-weight: 700; line-height: 1.05; margin-bottom: 10px; }
+  .tile .label { font-size: 24px; line-height: 1.35; color: var(--ink2); }
+  .question {
+    border-left: 8px solid var(--ours); background: var(--ours-wash);
+    padding: 22px 30px; border-radius: 0 12px 12px 0; font-size: 31px; line-height: 1.35;
+  }
+
+  /* Code */
+  pre.code {
+    margin: 0; background: #f6f5f1; border: 2px solid var(--hair); border-radius: 12px;
+    padding: 18px 22px; font-family: var(--mono); font-size: 20px; line-height: 1.45; color: var(--ink);
+    white-space: pre; overflow: hidden;
+  }
+  pre.code .c { color: #6b6a65; }
+  pre.code .k { color: var(--ours-ink); font-weight: 600; }
+  .steps { list-style: none; padding: 0; margin: 0; counter-reset: s; }
+  .steps li { counter-increment: s; position: relative; padding-left: 50px; font-size: 25px; line-height: 1.33; margin-bottom: 16px; }
+  .steps li::before {
+    content: counter(s); position: absolute; left: 0; top: 0; width: 34px; height: 34px; border-radius: 17px;
+    background: var(--ours); color: #fff; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Demo card */
+  .config { border: 2px solid var(--hair); border-radius: 14px; background: #fff; padding: 24px 30px; }
+  .config dl { display: grid; grid-template-columns: 210px 1fr; gap: 12px 24px; margin: 0; }
+  .config dt { font-size: 23px; color: var(--ink2); font-weight: 600; }
+  .config dd { margin: 0; font-size: 24px; line-height: 1.35; }
+  .player { margin-top: 18px; display: flex; align-items: center; gap: 18px; font-size: 22px; color: var(--ink2); }
+  .player audio { width: 520px; }
+
+  /* Chart */
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 30px; font-size: 21px; color: var(--ink2); margin: -8px 0 10px; }
+  .legend span { display: inline-flex; align-items: center; gap: 10px; }
+  .chart-row { display: flex; gap: 34px; align-items: flex-start; }
+  .chart-side { width: 400px; padding-top: 30px; }
+  .chart-side p { font-size: 24px; line-height: 1.4; }
+  svg text { font-family: var(--sans); }
+
+  /* Two-column findings */
+  .panel { border: 2px solid var(--hair); border-radius: 14px; padding: 20px 26px; background: #fff; }
+  .panel h3 { font-size: 26px; margin: 0 0 12px; }
+  .panel li { font-size: 24px; line-height: 1.36; margin-bottom: 10px; }
+  .bottom-note { margin-top: 22px; font-size: 23px; line-height: 1.4; }
+
+  /* Question cards */
+  .qcard .kicker { font-size: 26px; color: var(--ours-ink); }
+  .qcard .asked { font-size: 25px; color: var(--ink2); font-style: italic; margin: -14px 0 30px; line-height: 1.4; max-width: 1350px; }
+  .qcard li { font-size: 29px; margin-bottom: 18px; }
+</style>
+</head>
+<body>
+<div class="stage">
+
+<!-- 1. Title -->
+<section class="slide title-slide">
+  <div class="rule"></div>
+  <div class="kicker">INFR11269 Machine Learning Systems &middot; coursework video</div>
+  <h1>Spoken-question RAG<br>on our own CUDA kernels</h1>
+  <div class="sub">Does cross-encoder reranking pay for itself?</div>
+  <div class="num">1 / 14</div>
+</section>
+
+<!-- 2. Pipeline -->
+<section class="slide">
+  <div class="kicker">The system</div>
+  <h2>From a spoken question to an answer</h2>
+  <div class="flow">
+    <div class="node plain">Spoken question<span class="tag">WAV file</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node ours"><b>ASR model on our CUDA kernels</b><span class="tag">GPU</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node">enc_a encoder<span class="tag">CPU</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node">Exact search over 24,000 posts<span class="tag">top N</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node ours"><b>Our reranker</b><span class="tag">top N &rarr; top 5, GPU</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node">Prompt<span class="tag">question + 5 posts</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node">Language model<span class="tag"><span class="nw">EuroLLM-22B</span> on the University ELM service</span></div>
+    <div class="arrow">&rarr;</div>
+    <div class="node plain">Answer</div>
+  </div>
+  <div class="key"><span><span class="swatch ours"></span>our work</span><span><span class="swatch"></span>supplied</span><span>Baseline: no reranker, the top 5 come straight from search</span></div>
+  <div class="row">
+    <div class="col">
+      <p><span class="ours-text">Ours</span></p>
+      <ul>
+        <li>The CUDA kernels in the five task files</li>
+        <li>The reranking stage, its scripts and tests</li>
+        <li>Reuse of cached transcripts; a fallback for malformed judge output</li>
+      </ul>
+    </div>
+    <div class="col">
+      <p class="muted"><b>Supplied</b></p>
+      <ul>
+        <li>ASR model code, enc_a, exact search</li>
+        <li>Prompt builder and ELM generator</li>
+        <li>The LLM judge, used only for evaluation</li>
+      </ul>
+    </div>
+  </div>
+  <div class="num">2 / 14</div>
+</section>
+
+<!-- 3. Kernels -->
+<section class="slide">
+  <div class="kicker">ASR &middot; homework 1</div>
+  <h2>The four kernel groups we wrote</h2>
+  <p class="small" style="margin:-16px 0 22px">GLM-ASR-Nano: about 2.3B float32 parameters (9 GB). Audio is padded to 30 s, so the encoder always runs 32 layers over 1500 positions; the <span class="nw">28-layer</span> decoder is greedy, with no KV cache.</p>
+  <div class="cards">
+    <div class="card"><h3><span class="tasklabel">Task 1</span> &middot; RoPE</h3>
+      <p>One thread rotates one pair of numbers. One launch covers both q and k, halving the launch cost over 396 calls. Neighbouring threads touch neighbouring addresses.</p></div>
+    <div class="card"><h3><span class="tasklabel">Task 2</span> &middot; Reductions</h3>
+      <p>A warp sums 32 values in 5 shuffle steps; a block combines its warp results in shared memory. Empty slots in a max hold &minus;&infin;, not 0. Softmax keeps a running (max, sum), so it reads each row twice, not three times.</p></div>
+    <div class="card"><h3><span class="tasklabel">Task 3</span> &middot; Tiled GEMM</h3>
+      <p>16&times;16 tiles of x and W in shared memory; each value is used 16 times. The W tile is loaded with k along threadIdx.x (coalesced) and padded to 16&times;17 (no bank conflicts). Bias and GELU are fused into the store.</p></div>
+    <div class="card"><h3><span class="tasklabel">Task 4</span> &middot; Attention</h3>
+      <p>FlashAttention-style: the score matrix is never stored. 4 warps (4 queries) share each tile of 32 keys and values. Each warp keeps a running max, sum and output, rescaled when a larger score appears. GQA and causal mask.</p></div>
+  </div>
+  <div class="footnote"><code>make test</code>: all 33 cases pass against a CPU reference (GEMM speed also compared with cuBLAS).</div>
+  <div class="num">3 / 14</div>
+</section>
+
+<!-- 4. ASR results -->
+<section class="slide">
+  <div class="kicker">ASR &middot; results</div>
+  <h2>Correct, but 3.0&times; slower than PyTorch</h2>
+  <div class="row">
+    <div style="flex: 1.25">
+      <table>
+        <thead><tr><th></th><th>Ours</th><th>PyTorch (supplied)</th></tr></thead>
+        <tbody>
+          <tr><td>Time per transcription</td><td class="hl">3230.6 &plusmn; 7.2 ms</td><td>1065.0 &plusmn; 0.2 ms</td></tr>
+          <tr><td>Time per token</td><td>248.5 ms</td><td>81.9 ms</td></tr>
+          <tr><td>Word accuracy</td><td>100%</td><td>100%</td></tr>
+          <tr class="sep"><td>linear, our GEMM (2757 calls)</td><td class="hl">2832.1 ms &middot; 83%</td><td>597.4 ms &middot; 42%</td></tr>
+          <tr><td>attention (396 calls)</td><td>547.3 ms &middot; 16%</td><td>313.3 ms &middot; 22%</td></tr>
+          <tr><td>RMSNorm (741 calls)</td><td>6.7 ms</td><td>85.5 ms</td></tr>
+          <tr><td>RoPE (396 calls)</td><td>3.0 ms</td><td>433.3 ms</td></tr>
+        </tbody>
+      </table>
+      <div class="caption"><code>./run.sh --profile</code>, RTX 2080 Ti, 3.5 s test clip. Time: mean &plusmn; std of 3 runs. Operation rows: GPU time in one profiled transcription, and its share.</div>
+    </div>
+    <div class="col">
+      <div class="panel">
+        <h3>Why the GEMM sets the speed</h3>
+        <ul>
+          <li>Encoder q_proj: ours <b>1,939</b> GFLOP/s, naive 234, cuBLAS <b>13,195</b></li>
+          <li>Each multiply-add needs two shared-memory reads, so shared memory, not arithmetic, is the limit</li>
+          <li>cuBLAS keeps blocks of values in registers and reuses them (register tiling)</li>
+          <li>Our RoPE and RMSNorm are one launch each; PyTorch builds them from many small operations</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="num">4 / 14</div>
+</section>
+
+<!-- 5. RAG headroom and question -->
+<section class="slide">
+  <div class="kicker">RAG &middot; the investigation</div>
+  <h2>Where the RAG pipeline loses quality</h2>
+  <div class="tiles">
+    <div class="tile"><div class="value">77% &rarr; 42%</div>
+      <div class="label">of relevant posts are in enc_a&rsquo;s top 100, but only 42% reach the top 5 that the model sees</div></div>
+    <div class="tile"><div class="value">0.14 vs 0.47</div>
+      <div class="label">mean judge score (0&ndash;1) when no relevant post is in the top 5, vs when at least one is</div></div>
+  </div>
+  <p class="small" style="margin:-18px 0 26px">Practice split, 350 spoken questions, supplied baseline.</p>
+  <div class="question">Does reranking enc_a&rsquo;s top N with an off-the-shelf cross-encoder put more relevant posts in the top 5 and give better answers &mdash; and what does it cost in latency, GPU memory and prompt size?</div>
+  <div class="num">5 / 14</div>
+</section>
+
+<!-- 6. Reranking stage -->
+<section class="slide">
+  <div class="kicker">RAG &middot; our change</div>
+  <h2>A reranking stage between search and prompt</h2>
+  <div class="row" style="gap: 40px">
+    <div style="width: 560px">
+      <ol class="steps">
+        <li>Exact search returns the top <b>N</b> posts instead of 5 (N = 10, 20, 50, 100)</li>
+        <li>A cross-encoder scores each (question, post) pair on the GPU: one transformer pass per post</li>
+        <li>Stable sort by score, keep the top 5 (ties keep enc_a&rsquo;s order)</li>
+        <li>Same prompt, same k = 5: only the choice and order of the 5 posts change</li>
+      </ol>
+      <p class="small" style="margin-top: 10px">Models: <b>ms-marco-MiniLM-L-6-v2</b> (22M, web-search data) and <b>bge-reranker-base</b> (278M, general data). Batches of 32, at most 512 tokens per pair.</p>
+    </div>
+    <div class="col">
+<pre class="code"><span class="c"># rag/src/rag.py, answer_transcript()</span>
+<span class="k">if</span> self.reranker <span class="k">is</span> None:      <span class="c"># baseline: the original path</span>
+    retrieval = self.retriever.retrieve(query_vector, k=k)
+    record_ids = retrieval["record_ids"]
+<span class="k">else</span>:                          <span class="c"># our stage</span>
+    retrieval = self.retriever.retrieve(
+        query_vector, k=self.candidate_depth)
+    rerank = self.reranker.rerank(
+        transcript, retrieval["record_ids"], self.data, k)
+    record_ids = rerank["record_ids"]
+
+<span class="c"># rag/extensions/reranker.py, rerank()</span>
+pairs = [(query, data.record_text(rid)) <span class="k">for</span> rid <span class="k">in</span> record_ids]
+scores = self._scores(pairs)
+<span class="c"># stable sort: ties keep the dense order</span>
+order = np.argsort(-scores, kind="stable")</pre>
+    </div>
+  </div>
+  <div class="num">6 / 14</div>
+</section>
+
+<!-- 7. Method -->
+<section class="slide">
+  <div class="kicker">RAG &middot; method</div>
+  <h2>How we measured</h2>
+  <div class="row">
+    <div class="col">
+      <div class="panel" style="height: 100%">
+        <h3>Held fixed</h3>
+        <ul>
+          <li>The same cached ASR transcripts in every run</li>
+          <li>k = 5 posts, same prompt builder</li>
+          <li>enc_a, exact search, <span class="nw">EuroLLM-22B</span> at <span class="nw">temperature 0.1</span></li>
+          <li>One RTX 2080 Ti</li>
+        </ul>
+      </div>
+    </div>
+    <div class="col">
+      <div class="panel" style="height: 100%">
+        <h3>Splits</h3>
+        <ul>
+          <li><b>Practice</b>, 350 questions: develop, and choose N for each model</li>
+          <li><b>Dev</b>, 125 questions: the final numbers</li>
+          <li>Dev answers: 375 generation and 375 judge calls</li>
+        </ul>
+      </div>
+    </div>
+    <div class="col" style="flex: 1.25">
+      <div class="panel" style="height: 100%">
+        <h3>Measured</h3>
+        <ul>
+          <li><b>Retrieval:</b> Recall@5 (main), MRR@10, NDCG@10, oracle Recall@5</li>
+          <li><b>Answers:</b> LLM judge (<span class="nw">EuroLLM-22B</span>, temperature 0), 3 scores of 0&ndash;4, sum / 12</li>
+          <li><b>Cost:</b> rerank ms (median, p95), GPU memory, prompt size</li>
+          <li><b>Statistics:</b> paired differences, 95% bootstrap CI</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  <div class="num">7 / 14</div>
+</section>
+
+<!-- 8. Live demo -->
+<section class="slide">
+  <div class="kicker">Live demonstration</div>
+  <h2>One spoken question, two runs</h2>
+  <div class="config">
+    <dl>
+      <dt>Input</dt><dd>Dev question 2 (<code>q_33fd7baba78a1358</code>), a spoken WAV file</dd>
+      <dt>Hardware</dt><dd>One RTX 2080 Ti on the teaching cluster</dd>
+      <dt>Fixed settings</dt><dd>ASR on our kernels (<code>ASR_CUDA=all</code>), enc_a on CPU, exact search, k = 5, <span class="nw">EuroLLM-22B-Instruct</span> at <span class="nw">temperature 0.1</span></dd>
+      <dt>Run 1: baseline</dt><dd><code>rag/scripts/run_audio_query.py</code>: audio &rarr; transcript &rarr; top 5 &rarr; answer</dd>
+      <dt>Run 2: our change</dt><dd><code>rag/scripts/generate_answers.py</code> with <code>--reranker bge-base --candidate-depth 10</code>, on the same transcript (from the cache)</dd>
+      <dt>Marked</dt><dd>Posts listed as relevant for this question in the dev relevance labels (qrels)</dd>
+    </dl>
+    <div class="player" id="player">
+      <span>Question audio:</span>
+      <audio controls preload="metadata" src="question.wav"></audio>
+    </div>
+  </div>
+  <div class="num">8 / 14</div>
+</section>
+
+<!-- 9. Retrieval chart -->
+<section class="slide">
+  <div class="kicker">RAG &middot; retrieval results (dev, 125 questions)</div>
+  <h2>Reranking more candidates makes retrieval worse</h2>
+  <div class="legend">
+    <span><svg width="44" height="16"><line x1="2" y1="8" x2="42" y2="8" stroke="#2a78d6" stroke-width="3"/><circle cx="22" cy="8" r="5" fill="#2a78d6"/></svg>MiniLM-L6 (22M)</span>
+    <span><svg width="44" height="16"><line x1="2" y1="8" x2="42" y2="8" stroke="#eb6834" stroke-width="3"/><rect x="17" y="3" width="10" height="10" fill="#eb6834"/></svg>bge-base (278M)</span>
+    <span><svg width="44" height="16"><line x1="2" y1="8" x2="42" y2="8" stroke="#52514e" stroke-width="3"/><path d="M22 2 L28 13 L16 13 Z" fill="#52514e"/></svg>oracle: the best any reordering of the top N could do</span>
+    <span><svg width="44" height="16"><line x1="2" y1="8" x2="42" y2="8" stroke="#0b0b0b" stroke-width="2.5" stroke-dasharray="7 5"/></svg>no reranking (baseline)</span>
+  </div>
+  <div class="chart-row">
+    <svg id="chart" width="1010" height="560" viewBox="0 0 1010 560" role="img" aria-label="Recall at 5 against the number of candidates reranked"></svg>
+    <div class="chart-side">
+      <p>A perfect reranker would gain a lot from deeper candidates: the oracle rises from 0.47 to 0.71.</p>
+      <p>Both real rerankers fall instead. NDCG@10 and MRR@10 are below the baseline at every N.</p>
+      <p class="small">On the practice split, even N = 10 is below the baseline on Recall@5.</p>
+    </div>
+  </div>
+  <div class="num">9 / 14</div>
+</section>
+
+<!-- 10. Answers and cost -->
+<section class="slide">
+  <div class="kicker">RAG &middot; answers and cost (dev, 125 questions)</div>
+  <h2>No measurable answer gain, but a real cost</h2>
+  <table>
+    <thead><tr>
+      <th>Configuration</th><th>Recall@5</th><th>MRR@10</th><th>Judge<br>(0&ndash;1)</th>
+      <th>&Delta; judge vs baseline<br>[95% CI], p</th><th>Rerank ms<br>(median)</th><th>GPU<br>memory</th><th>Prompt<br>(chars)</th>
+    </tr></thead>
+    <tbody>
+      <tr><td>Baseline</td><td>0.380</td><td>0.460</td><td>0.314</td><td>&ndash;</td><td>&ndash;</td><td>&ndash;</td><td>4,980</td></tr>
+      <tr><td>MiniLM, N = 20</td><td>0.374</td><td>0.428</td><td>0.305</td><td>&minus;0.009 [&minus;0.065, +0.048], 0.78</td><td>61</td><td>359 MB</td><td>6,004 (+21%)</td></tr>
+      <tr><td>bge, N = 10</td><td>0.403</td><td>0.419</td><td class="hl">0.349</td><td class="hl">+0.035 [&minus;0.021, +0.089], 0.24</td><td>111</td><td>1.6 GB</td><td>5,362 (+8%)</td></tr>
+    </tbody>
+  </table>
+  <div class="caption">Same transcripts and k = 5 in every row. Judge: EuroLLM-22B, one judgement per answer. Rerank ms: latency benchmark without ELM calls (5 repeats &times; 125 questions, after warm-up). N was chosen on the practice split.</div>
+  <div class="row" style="margin-top: 26px">
+    <div class="col panel">
+      <h3>Quality</h3>
+      <ul>
+        <li>Both 95% intervals include zero: we cannot say either reranker changes answer quality</li>
+        <li>With 125 questions, effects smaller than about &plusmn;0.055 would go unseen</li>
+      </ul>
+    </div>
+    <div class="col panel">
+      <h3>Cost</h3>
+      <ul>
+        <li>Latency grows with N: MiniLM 32&ndash;169 ms, bge 111&ndash;647 ms per question</li>
+        <li>Small next to the 9.2 s pipeline (+1%), but our ASR already uses 8.6 GiB of this 11 GB GPU</li>
+      </ul>
+    </div>
+  </div>
+  <div class="num">10 / 14</div>
+</section>
+
+<!-- 11. Why -->
+<section class="slide">
+  <div class="kicker">RAG &middot; analysis</div>
+  <h2>Why reranking does not help here</h2>
+  <div class="row">
+    <div class="col panel">
+      <h3>Better evidence does give better answers</h3>
+      <ul>
+        <li>No relevant post in the top 5: judge 0.12 (52 questions), against 0.45 (73 questions)</li>
+        <li>bge: the 17 questions whose Recall@5 rose gained 0.18 on average</li>
+      </ul>
+    </div>
+    <div class="col panel">
+      <h3>&hellip; but the rerankers rarely improve the evidence</h3>
+      <ul>
+        <li>Relevant post at rank 1: 47 questions in the baseline; MiniLM keeps 33, bge keeps 28</li>
+        <li>Recall@5 rose for 17&ndash;19 questions and fell for 11&ndash;17</li>
+      </ul>
+    </div>
+  </div>
+  <div class="bottom-note"><b>Likely cause: domain mismatch.</b> MiniLM was trained on web-search queries and bge on general data; our posts are long, informal forum posts and our questions come through ASR. Quality falls as N grows, and the larger model falls fastest.</div>
+  <div class="bottom-note small" style="margin-top: 14px"><b>Checked and ruled out:</b> longer prompts (correlation with the score change 0.03 and 0.15) &middot; truncation at 512 tokens (10&ndash;12% of pairs) &middot; ASR errors (all runs share the transcripts) &middot; judge noise (cannot explain the retrieval metrics)</div>
+  <div class="num">11 / 14</div>
+</section>
+
+<!-- 12. Conclusion -->
+<section class="slide">
+  <div class="kicker">Conclusion</div>
+  <h2>What we can conclude</h2>
+  <ul>
+    <li><b>ASR:</b> our kernels are correct (33 of 33 tests, 100% word accuracy), and the memory-bound ones are fast (RoPE at 80% of peak bandwidth). The simple tiled GEMM is 83% of GPU time and 7&ndash;10&times; below cuBLAS, so the model is 3.0&times; slower than PyTorch. Next: register tiling, and a KV cache.</li>
+    <li><b>RAG:</b> off-the-shelf cross-encoders cost 32&ndash;647 ms per question, up to 1.6 GB of GPU memory and up to 21% longer prompts, with no measurable answer gain on this corpus. Better Recall@5 does help; these rerankers just do not rank this corpus better than enc_a.</li>
+    <li class="muted"><b>Limitations:</b> 125 dev questions; each answer judged once, by the model that wrote it, from the transcript; one GPU type and a shared ELM service.</li>
+  </ul>
+  <div class="num">12 / 14</div>
+</section>
+
+<!-- 13. Question 1 -->
+<section class="slide qcard">
+  <div class="kicker">Question 1</div>
+  <h2>Our main design choice</h2>
+  <div class="asked">What is one important decision you made when building or experimenting with your system, and why did you make it?</div>
+  <ul>
+    <li>Reranking as a <b>separate stage between search and prompt</b>, with <b>k fixed at 5</b> and the <b>same cached transcripts</b> in every run: only the choice and order of the 5 posts change</li>
+    <li>Why: 77% of relevant posts are in the top 100, but only 42% reach the top 5; answers score 0.14 without relevant evidence, 0.47 with it</li>
+    <li>Not chosen: a larger k (longer prompts, so two effects get mixed) &middot; an approximate index (search takes 5 ms of a 9.2 s pipeline)</li>
+  </ul>
+  <div class="num">13 / 14</div>
+</section>
+
+<!-- 14. Question 2 -->
+<section class="slide qcard">
+  <div class="kicker">Question 2</div>
+  <h2>How we checked our work</h2>
+  <div class="asked">How did you check that your system, or the part you worked on, was working as intended?</div>
+  <ul>
+    <li><b>Unit tests with stub models:</b> a fake cross-encoder makes the right order known in advance; one test checks that the baseline path is unchanged</li>
+    <li><b>Checks on the real runs:</b> Recall@100 is 0.724 in every configuration, as it must be when only the top N is reordered; our sweep reproduces the supplied <code>evaluate_rag.py</code> baseline exactly</li>
+    <li><b>Example, testing the judge:</b> 5 practice questions answered twice with identical inputs: 4 of 5 scores changed (mean 0.15, one by 0.5). So we compare paired means over 125 questions, with bootstrap intervals</li>
+  </ul>
+  <div class="num">14 / 14</div>
+</section>
+
+</div>
+
+<script>
+(function () {
+  // Recall@5 on dev (report, Figure 2 / Table 5)
+  var data = {
+    N: [10, 20, 50, 100],
+    minilm: [0.3957, 0.3743, 0.3555, 0.3326],
+    bge: [0.4030, 0.3786, 0.3199, 0.2859],
+    oracle: [0.4740, 0.5760, 0.6678, 0.7106],
+    baseline: 0.3795
+  };
+  var W = 1010, H = 560, L = 92, R = 250, T = 18, B = 82;
+  var lo = Math.log10(10) - 0.06, hi = Math.log10(100) + 0.06;
+  function x(n) { return L + (Math.log10(n) - lo) / (hi - lo) * (W - L - R); }
+  function y(v) { return T + (0.75 - v) / 0.5 * (H - T - B); }
+  var NS = 'http://www.w3.org/2000/svg';
+  var svg = document.getElementById('chart');
+  function el(name, attrs, text) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text !== undefined) e.textContent = text;
+    svg.appendChild(e);
+    return e;
+  }
+  var x0 = L, x1 = W - R;
+  // gridlines and y ticks
+  [0.3, 0.4, 0.5, 0.6, 0.7].forEach(function (v) {
+    el('line', { x1: x0, x2: x1, y1: y(v), y2: y(v), stroke: '#e1e0d9', 'stroke-width': 1 });
+    el('text', { x: x0 - 14, y: y(v) + 8, 'text-anchor': 'end', 'font-size': 22, fill: '#52514e' }, v.toFixed(1));
+  });
+  // x axis
+  el('line', { x1: x0, x2: x1, y1: H - B, y2: H - B, stroke: '#c3c2b7', 'stroke-width': 1.5 });
+  data.N.forEach(function (n) {
+    el('line', { x1: x(n), x2: x(n), y1: H - B, y2: H - B + 8, stroke: '#c3c2b7', 'stroke-width': 1.5 });
+    el('text', { x: x(n), y: H - B + 34, 'text-anchor': 'middle', 'font-size': 22, fill: '#52514e' }, String(n));
+  });
+  el('text', { x: (x0 + x1) / 2, y: H - 10, 'text-anchor': 'middle', 'font-size': 22, fill: '#52514e' }, 'Candidates reranked, N (log scale)');
+  el('text', { x: 24, y: (T + H - B) / 2, 'text-anchor': 'middle', 'font-size': 22, fill: '#52514e', transform: 'rotate(-90 24 ' + ((T + H - B) / 2) + ')' }, 'Recall@5');
+  // baseline (reference line, dashed)
+  el('line', { x1: x0, x2: x1, y1: y(data.baseline), y2: y(data.baseline), stroke: '#0b0b0b', 'stroke-width': 2.5, 'stroke-dasharray': '9 7' });
+  function series(vals, color, marker) {
+    var d = vals.map(function (v, i) { return (i ? 'L' : 'M') + x(data.N[i]).toFixed(1) + ' ' + y(v).toFixed(1); }).join(' ');
+    el('path', { d: d, fill: 'none', stroke: color, 'stroke-width': 3, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' });
+    vals.forEach(function (v, i) {
+      var cx = x(data.N[i]), cy = y(v);
+      if (marker === 'circle') el('circle', { cx: cx, cy: cy, r: 7, fill: color, stroke: '#fcfcfb', 'stroke-width': 2.5 });
+      if (marker === 'square') el('rect', { x: cx - 7, y: cy - 7, width: 14, height: 14, fill: color, stroke: '#fcfcfb', 'stroke-width': 2.5 });
+      if (marker === 'triangle') el('path', { d: 'M' + cx + ' ' + (cy - 9) + ' L' + (cx + 8) + ' ' + (cy + 6) + ' L' + (cx - 8) + ' ' + (cy + 6) + ' Z', fill: color, stroke: '#fcfcfb', 'stroke-width': 2.5 });
+    });
+  }
+  series(data.oracle, '#52514e', 'triangle');
+  series(data.minilm, '#2a78d6', 'circle');
+  series(data.bge, '#eb6834', 'square');
+  // direct end labels (text in ink colours; the marker beside them carries identity)
+  var lx = x1 + 18;
+  el('text', { x: lx, y: y(data.oracle[3]) + 8, 'font-size': 22, fill: '#0b0b0b' }, 'oracle 0.71');
+  el('text', { x: lx, y: y(data.baseline) + 8, 'font-size': 22, fill: '#0b0b0b' }, 'no reranking 0.38');
+  el('text', { x: lx, y: y(data.minilm[3]) + 8, 'font-size': 22, fill: '#0b0b0b' }, 'MiniLM 0.33');
+  el('text', { x: lx, y: y(data.bge[3]) + 8, 'font-size': 22, fill: '#0b0b0b' }, 'bge 0.29');
+})();
+
+(function () {
+  var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+  var i = 0;
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(function (s, k) { s.classList.toggle('active', k === i); });
+    try { history.replaceState(null, '', '#' + (i + 1)); } catch (e) {}
+  }
+  function fit() {
+    var s = Math.min(window.innerWidth / 1600, window.innerHeight / 900);
+    document.documentElement.style.setProperty('--scale', s);
+  }
+  window.addEventListener('resize', fit);
+  fit();
+  document.addEventListener('keydown', function (e) {
+    if (e.target && e.target.tagName === 'AUDIO') return;
+    var k = e.key;
+    if (k === 'ArrowRight' || k === 'ArrowDown' || k === 'PageDown' || k === ' ' || k === 'Enter') { e.preventDefault(); show(i + 1); }
+    else if (k === 'ArrowLeft' || k === 'ArrowUp' || k === 'PageUp' || k === 'Backspace') { e.preventDefault(); show(i - 1); }
+    else if (k === 'Home') show(0);
+    else if (k === 'End') show(slides.length - 1);
+    else if (k === 'f' || k === 'F') {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen();
+    }
+  });
+  document.addEventListener('click', function (e) {
+    if (e.target.closest && e.target.closest('audio, a, button')) return;
+    show(i + 1);
+  });
+  // Hide the mouse pointer when it has not moved for 2 seconds.
+  var t;
+  document.addEventListener('mousemove', function () {
+    document.body.classList.remove('idle');
+    clearTimeout(t);
+    t = setTimeout(function () { document.body.classList.add('idle'); }, 2000);
+  });
+  // Hide the audio player if question.wav is not next to this file.
+  var audio = document.querySelector('#player audio');
+  if (audio) audio.addEventListener('error', function () { document.getElementById('player').style.display = 'none'; });
+  var h = parseInt(location.hash.slice(1), 10);
+  show(isNaN(h) ? 0 : h - 1);
+})();
+</script>
+</body>
+</html>
